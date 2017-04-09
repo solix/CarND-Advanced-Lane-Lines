@@ -1,3 +1,4 @@
+from Line import Line
 from helper import *
 import numpy as np
 import cv2
@@ -21,16 +22,27 @@ def process_Image(img):
     undis_img =cal_undistort(img, mtx, dist)# undistort each image
 
     #define points for perspective transformation
-    src = np.float32([[270, 700], [540, 500], [1120, 700], [800, 500]])
+    src = np.float32([[270, 700], [540, 500], [1120, 700], [790, 500]])
     dst = np.float32([[270, 700], [270, 500], [1120, 700], [1120, 500]])
     # color threshold
     s_channel = hls_select(undis_img, thresh=(90, 255)) #this threshold is shown with a cleanest line extraction
+
+    # #combined thresholding
+    # gradx = abs_sobel_thresh(s_channel, orient='x', thresh_min=0, thresh_max=255,ksize=9)
+    # subplot_images(s_channel,gradx,'schannel','gradx')
+    # grady = abs_sobel_thresh(s_channel, orient='y', thresh_min=20, thresh_max=100,ksize=9)
+    # mag_binary = mag_thresh(s_channel, sobel_kernel=3, mag_thresh=(0, 255))
+    # dir_binary = dir_threshold(s_channel, sobel_kernel=3, thresh=(0, np.pi / 2))
+    # # warp
+    # combined = np.zeros_like(dir_binary)
+    # combined[((gradx == 1) & (grady == 1)) | ((mag_binary == 1) & (dir_binary == 1))] = 1
     #warp
     binary, M, minV = warp(s_channel, src, dst)
 
     #now clean lines are extracted lets go find the lanes
     histogram = np.sum(binary[int(binary.shape[0] / 2):, :], axis=0)
     # Create an output image to draw on and  visualize the result
+
     out_img = np.dstack((binary, binary, binary)) * 255
     # Find the peak of the left and right halves of the histogram
     # These will be the starting point for the left and right lines
@@ -62,12 +74,13 @@ def process_Image(img):
     # Step through the windows one by one
     for window in range(nwindows):
         # Identify window boundaries in x and y (and right and left)
-        win_y_low = binary.shape[0] - (window+1)*window_height
-        win_y_high = binary.shape[0] - window*window_height
+        win_y_low = binary.shape[0] - np.int((window + 1) * window_height)
+        win_y_high = binary.shape[0] - np.int(window * window_height)
         win_xleft_low = leftx_current - margin
         win_xleft_high = leftx_current + margin
         win_xright_low = rightx_current - margin
         win_xright_high = rightx_current + margin
+        # Draw the windows on the visualization image
         # Draw the windows on the visualization image
         cv2.rectangle(out_img,(win_xleft_low,win_y_low),(win_xleft_high,win_y_high),(0,255,0), 2)
         cv2.rectangle(out_img,(win_xright_low,win_y_low),(win_xright_high,win_y_high),(0,255,0), 2)
@@ -88,6 +101,7 @@ def process_Image(img):
     right_lane_inds = np.concatenate(right_lane_inds)
 
     # Extract left and right line pixel positions
+
     leftx = nonzerox[left_lane_inds]
     lefty = nonzeroy[left_lane_inds]
     rightx = nonzerox[right_lane_inds]
@@ -96,6 +110,9 @@ def process_Image(img):
     # Fit a second order polynomial to each
 
     left_fit = np.polyfit(lefty, leftx, 2)
+    if(rightx == []):
+        rightx = nonzerox[right_lane_inds-1]
+
     right_fit = np.polyfit(righty, rightx, 2)
     # Generate x and y values for plotting
     ploty = np.linspace(0, binary.shape[0] - 1, binary.shape[0])
@@ -142,7 +159,7 @@ def process_Image(img):
     road_bkg = np.zeros_like(img)
     cv2.fillPoly(road, [left_lane], color=[255, 0, 0])
     cv2.fillPoly(road, [right_lane], color=[0, 0, 255])
-    cv2.fillPoly(road,[inner_lane],color=[0,255,0])
+    cv2.fillPoly(road,[inner_lane],color=[64,225,10])
     cv2.fillPoly(road_bkg, [left_lane], color=[255, 0, 0])
     cv2.fillPoly(road_bkg, [right_lane], color=[0, 0, 255])
     road = unwarp(road, minV)
@@ -158,14 +175,14 @@ def process_Image(img):
         side_pos='right'
 
     cv2.putText(result,'Radius of Curvature is: '+str(round(left_curverad,3)) +'(m)',(50,50), cv2.FONT_HERSHEY_SIMPLEX,1,(255,255,255),2)
-    cv2.putText(result,'Vehicle is: '+str(abs(round(center_diff,3))) +'m '+side_pos +' of center',(50,100), cv2.FONT_HERSHEY_SIMPLEX,1,(255,255,255),2)
+    cv2.putText(result,'Vehicle is: '+str(abs(round(center_diff,3))) +' meter '+side_pos +' of center',(50,100), cv2.FONT_HERSHEY_SIMPLEX,1,(255,255,255),2)
 
     return result
 
 
-Input_video = './challenge_video.mp4'
+Input_video = './project_video.mp4'
 Out_video = './tracked_video.mp4'
 print(Input_video)
 video_clip= VideoFileClip(Input_video)
 video_tracked = video_clip.fl_image(process_Image)
-video_tracked.write_videofile(Out_video,audio=False,fps=5)
+video_tracked.write_videofile(Out_video,audio=False,fps=7)

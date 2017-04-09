@@ -16,6 +16,25 @@ dist = calib_dist["dist"]
 #import test images
 images = glob.glob('./test_images/*.jpg')
 
+
+def color_thresh( img):
+    img = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
+
+    yellow_min = np.array([15, 100, 120], np.uint8)
+    yellow_max = np.array([80, 255, 255], np.uint8)
+    yellow_mask = cv2.inRange(img, yellow_min, yellow_max)
+
+    white_min = np.array([20, 0, 200], np.uint8)
+    white_max = np.array([255, 30, 255], np.uint8)
+    white_mask = cv2.inRange(img, white_min, white_max)
+
+    binary_output = np.zeros_like(img[:, :, 0])
+    binary_output[((yellow_mask != 0) | (white_mask != 0))] = 1
+
+    filtered = img
+    filtered[((yellow_mask == 0) & (white_mask == 0))] = 0
+
+    return binary_output
 #loop over each image and apply preprocessing pipeline
 for idx, fname in enumerate(images):
 
@@ -23,17 +42,30 @@ for idx, fname in enumerate(images):
     print('workin on ', fname)
 
     undis_img =cal_undistort(img, mtx, dist)# undistort each image
-
+    # plt.imshow(undis_img)
+    # plt.show()
     #define points for perspective transformation
-    src = np.float32([[270, 700], [540, 500], [1120, 700], [800, 500]])
-    dst = np.float32([[270, 700], [270, 500], [1120, 700], [1120, 500]])
+    src = np.float32([[270, 700], [540, 500], [1220, 700], [800, 500]])
+    dst = np.float32([[270, 700], [270, 500], [1180, 700], [1180, 500]])
+    plot_points(undis_img)
     # color threshold
-    s_channel = hls_select(undis_img, thresh=(120, 255)) #this threshold is shown with a cleanest line extraction
-    #warp
-    binary, M, minV = warp(s_channel, src, dst)
+    s_channel = hls_select(undis_img, thresh=(90, 100)) #this threshold is shown with a cleanest line extraction
+    # # combined thresholding
+    gradx = abs_sobel_thresh(s_channel, orient='x', thresh_min=20, thresh_max=100, ksize=9)
+    # grady = abs_sobel_thresh(s_channel, orient='y', thresh_min=80, thresh_max=100, ksize=9)
+    # mag_binary = mag_thresh(s_channel, sobel_kernel=3, mag_thresh=(0, 255))
+    # dir_binary = dir_threshold(s_channel, sobel_kernel=3, thresh=(0, np.pi / 2))
+    # # warp
+    # combined = np.zeros_like(dir_binary)
+    # combined[((gradx == 1) & (grady == 1)) | ((mag_binary == 1) & (dir_binary == 1))] = 1
+    # cltr = color_thresh(undis_img)
+
+    binary, M, minV = warp(gradx, src, dst)
 
     #now clean lines are extracted lets go find the lanes
     histogram = np.sum(binary[int(binary.shape[0] / 2):, :], axis=0)
+    plt.plot(histogram)
+    plt.show()
     # Create an output image to draw on and  visualize the result
     out_img = np.dstack((binary, binary, binary)) * 255
     # Find the peak of the left and right halves of the histogram
@@ -56,9 +88,9 @@ for idx, fname in enumerate(images):
     rightx_current = rightx_base
 
     # Set the width of the windows +/- margin
-    margin = 100
+    margin =80
     # Set minimum number of pixels found to recenter window
-    minpix = 50
+    minpix = 40
     # Create empty lists to receive left and right lane pixel indices
     left_lane_inds = []
     right_lane_inds = []
@@ -66,8 +98,8 @@ for idx, fname in enumerate(images):
     # Step through the windows one by one
     for window in range(nwindows):
         # Identify window boundaries in x and y (and right and left)
-        win_y_low = binary.shape[0] - (window+1)*window_height
-        win_y_high = binary.shape[0] - window*window_height
+        win_y_low = binary.shape[0] - np.int((window + 1) * window_height)
+        win_y_high = binary.shape[0] - np.int(window * window_height)
         win_xleft_low = leftx_current - margin
         win_xleft_high = leftx_current + margin
         win_xright_low = rightx_current - margin
@@ -138,16 +170,22 @@ for idx, fname in enumerate(images):
                                   np.concatenate((ploty, ploty[::-1]), axis=0))), np.int32)
     right_lane = np.array(list(zip(np.concatenate((right_fitx - margin / 2, right_fitx[::-1] + margin / 2), axis=0),
                                    np.concatenate((ploty, ploty[::-1]), axis=0))), np.int32)
+    inner_lane = np.array(list(zip(np.concatenate((left_fitx + margin / 2, right_fitx[::-1] - margin / 2), axis=0),
+                                   np.concatenate((ploty, ploty[::-1]), axis=0))), np.int32)
+
     road = np.zeros_like(img)
     road_bkg = np.zeros_like(img)
     cv2.fillPoly(road, [left_lane], color=[255, 0, 0])
     cv2.fillPoly(road, [right_lane], color=[0, 0, 255])
+    cv2.fillPoly(road,[inner_lane],color=[64,200,10])
     cv2.fillPoly(road_bkg, [left_lane], color=[255, 0, 0])
     cv2.fillPoly(road_bkg, [right_lane], color=[0, 0, 255])
+    cv2.fillPoly(road_bkg,[inner_lane],color=[64,225,10])
+
     road = unwarp(road, minV)
     road_bk = unwarp(road_bkg, minV)
     base = cv2.addWeighted(img, 1.0, road_bk, -1.0, 0.0)
-    base = cv2.addWeighted(img, 1.0, road, 2.0, 0.0)
+    result = cv2.addWeighted(base, 1.0, road, 0.8, 0.0)
 
     #write radius and vehicle position difference from center of the lane
     camera_center = (left_fitx[-1]+right_fitx[-1])/2
@@ -156,10 +194,11 @@ for idx, fname in enumerate(images):
     if center_diff <= 0:
         side_pos='right'
 
-    cv2.putText(base,'Radius of Curvature is: '+str(round(left_curverad,3)) +'(m)',(50,50), cv2.FONT_HERSHEY_SIMPLEX,1,(255,255,255),2)
-    cv2.putText(base,'Vehicle is: '+str(abs(round(center_diff,3))) +'m '+side_pos +' of center',(50,100), cv2.FONT_HERSHEY_SIMPLEX,1,(255,255,255),2)
-
-    write_to_fie = './imgs_tracked/test_tracked'+str(idx)+'.jpg'
-    cv2.imwrite(write_to_fie,base)
+    cv2.putText(result,'Radius of Curvature is: '+str(round(left_curverad,3)) +'(m)',(50,50), cv2.FONT_HERSHEY_SIMPLEX,1,(255,255,255),2)
+    cv2.putText(result,'Vehicle is: '+str(abs(round(center_diff,3))) +'m '+side_pos +' of center',(50,100), cv2.FONT_HERSHEY_SIMPLEX,1,(255,255,255),2)
+    # plt.imshow(result)
+    # plt.show()
+    # write_to_fie = './imgs_tracked/test_tracked'+str(idx)+'.jpg'
+    # cv2.imwrite(write_to_fie,base)
 
 

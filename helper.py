@@ -9,11 +9,29 @@ def plot_points(img):
     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     plt.imshow(img, cmap='gray')
     plt.title('source points chosen manually')
-    plt.plot(800, 500, 'o')  # topright
+    plt.plot(750, 500, 'o')  # topright
     plt.plot(1120, 700, 'o')  # bottomright
     plt.plot(540, 500, 'o')  # topleft
     plt.plot(270, 700, 'o')  # bottomleft
 
+def color_thresh( img):
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+
+    yellow_min = np.array([ 0, 80, 200], np.uint8)
+    yellow_max = np.array([ 40, 255, 255], np.uint8)
+    yellow_mask = cv2.inRange(img, yellow_min, yellow_max)
+
+    white_min = np.array([20, 0, 200], np.uint8)
+    white_max = np.array([255, 80, 255], np.uint8)
+    white_mask = cv2.inRange(img, white_min, white_max)
+
+    binary_output = np.zeros_like(img[:, :, 0])
+    binary_output[((yellow_mask != 0) | (white_mask != 0))] = 1
+
+    filtered = img
+    filtered[((yellow_mask == 0) & (white_mask == 0))] = 0
+
+    return binary_output
 
 def subplot_images(img1, img2, title1, title2):
 
@@ -59,16 +77,16 @@ def unwarp(warp_img, minV):
 # then takes an absolute value and applies a threshold.
 # Note: calling your function with orient='x', thresh_min=5, thresh_max=100
 # should produce output like the example image shown above this quiz.
-def abs_sobel_thresh(img, orient='x', thresh_min=130, thresh_max=255):
+def abs_sobel_thresh(img,ksize=3, orient='x', thresh_min=130, thresh_max=255):
     # # Apply the following steps to img
     # # 1) Convert to grayscale
     # gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
 
     # 2) Take the derivative in x or y given orient = 'x' or 'y'
     if (orient == 'x'):
-        sobel = cv2.Sobel(img, cv2.CV_64F, 1, 0)
+        sobel = cv2.Sobel(img, cv2.CV_64F, 1, 0,ksize=ksize)
     if (orient == 'y'):
-        sobel = cv2.Sobel(img, cv2.CV_64F, 0, 1)
+        sobel = cv2.Sobel(img, cv2.CV_64F, 0, 1,ksize=ksize)
     # 3) Take the absolute value of the derivative or gradient
     abs_sobel = np.absolute(sobel)
     # 4) Scale to 8-bit (0 - 255) then convert to type = np.uint8
@@ -106,10 +124,9 @@ def mag_thresh(img, sobel_kernel=3, mag_thresh=(0, 255)):
 # Define a function that applies Sobel x and y,
 # then computes the direction of the gradient
 # and applies a threshold.
-def dir_threshold(img, sobel_kernel=3, thresh=(0, np.pi / 2)):
+def dir_threshold(gray, sobel_kernel=3, thresh=(0, np.pi / 2)):
     # Apply the following steps to img
     # 1) Convert to grayscale
-    gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
     # 2) Take the gradient in x and y separately
     sobelx = cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize=sobel_kernel)
     sobely = cv2.Sobel(gray, cv2.CV_64F, 0, 1, ksize=sobel_kernel)
@@ -128,7 +145,7 @@ def dir_threshold(img, sobel_kernel=3, thresh=(0, np.pi / 2)):
 
 # Define a function that thresholds the S-channel of HLS
 # Use exclusive lower bound (>) and inclusive upper (<=)
-def hls_select(img, thresh=(20, 100)):
+def hls_select(img, thresh=(90, 255)):
     # 1) Convert to HLS color space
     hls = cv2.cvtColor(img, cv2.COLOR_BGR2HLS)
     # 2) Apply a threshold to the S channel
