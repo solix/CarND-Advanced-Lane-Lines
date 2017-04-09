@@ -47,24 +47,25 @@ for idx, fname in enumerate(images):
     #define points for perspective transformation
     src = np.float32([[270, 700], [540, 500], [1220, 700], [800, 500]])
     dst = np.float32([[270, 700], [270, 500], [1180, 700], [1180, 500]])
-    plot_points(undis_img)
+    # plot_points(undis_img)
     # color threshold
     s_channel = hls_select(undis_img, thresh=(90, 100)) #this threshold is shown with a cleanest line extraction
     # # combined thresholding
-    gradx = abs_sobel_thresh(s_channel, orient='x', thresh_min=20, thresh_max=100, ksize=9)
+    gradx = abs_sobel_thresh(undis_img, orient='x', thresh_min=20, thresh_max=100, ksize=15)
     # grady = abs_sobel_thresh(s_channel, orient='y', thresh_min=80, thresh_max=100, ksize=9)
     # mag_binary = mag_thresh(s_channel, sobel_kernel=3, mag_thresh=(0, 255))
     # dir_binary = dir_threshold(s_channel, sobel_kernel=3, thresh=(0, np.pi / 2))
     # # warp
-    # combined = np.zeros_like(dir_binary)
-    # combined[((gradx == 1) & (grady == 1)) | ((mag_binary == 1) & (dir_binary == 1))] = 1
+    combined = np.zeros_like(s_channel)
+    combined[((gradx == 1) | (s_channel == 1))] = 1
     # cltr = color_thresh(undis_img)
 
-    binary, M, minV = warp(gradx, src, dst)
+
+    binary, M, minV = warp(combined, src, dst)
 
     #now clean lines are extracted lets go find the lanes
     histogram = np.sum(binary[int(binary.shape[0] / 2):, :], axis=0)
-    plt.plot(histogram)
+    plt.imshow(binary)
     plt.show()
     # Create an output image to draw on and  visualize the result
     out_img = np.dstack((binary, binary, binary)) * 255
@@ -75,7 +76,7 @@ for idx, fname in enumerate(images):
     rightx_base = np.argmax(histogram[midpoint:]) + midpoint
 
     # Choose the number of sliding windows
-    nwindows = 9
+    nwindows = 18
     # Set height of windows
     window_height = np.int(binary.shape[0] / nwindows)
     #non zero pixels
@@ -90,7 +91,7 @@ for idx, fname in enumerate(images):
     # Set the width of the windows +/- margin
     margin =80
     # Set minimum number of pixels found to recenter window
-    minpix = 40
+    minpix = 60
     # Create empty lists to receive left and right lane pixel indices
     left_lane_inds = []
     right_lane_inds = []
@@ -196,8 +197,8 @@ for idx, fname in enumerate(images):
 
     cv2.putText(result,'Radius of Curvature is: '+str(round(left_curverad,3)) +'(m)',(50,50), cv2.FONT_HERSHEY_SIMPLEX,1,(255,255,255),2)
     cv2.putText(result,'Vehicle is: '+str(abs(round(center_diff,3))) +'m '+side_pos +' of center',(50,100), cv2.FONT_HERSHEY_SIMPLEX,1,(255,255,255),2)
-    # plt.imshow(result)
-    # plt.show()
+    plt.imshow(result)
+    plt.show()
     # write_to_fie = './imgs_tracked/test_tracked'+str(idx)+'.jpg'
     # cv2.imwrite(write_to_fie,base)
 

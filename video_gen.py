@@ -25,19 +25,12 @@ def process_Image(img):
     src = np.float32([[270, 700], [540, 500], [1120, 700], [790, 500]])
     dst = np.float32([[270, 700], [270, 500], [1120, 700], [1120, 500]])
     # color threshold
-    s_channel = hls_select(undis_img, thresh=(90, 255)) #this threshold is shown with a cleanest line extraction
-
+    s_channel = hls_select(undis_img, thresh=(90, 140)) #this threshold is shown with a cleanest line extraction
+    combined = np.zeros_like(s_channel)
     # #combined thresholding
-    # gradx = abs_sobel_thresh(s_channel, orient='x', thresh_min=0, thresh_max=255,ksize=9)
-    # subplot_images(s_channel,gradx,'schannel','gradx')
-    # grady = abs_sobel_thresh(s_channel, orient='y', thresh_min=20, thresh_max=100,ksize=9)
-    # mag_binary = mag_thresh(s_channel, sobel_kernel=3, mag_thresh=(0, 255))
-    # dir_binary = dir_threshold(s_channel, sobel_kernel=3, thresh=(0, np.pi / 2))
-    # # warp
-    # combined = np.zeros_like(dir_binary)
-    # combined[((gradx == 1) & (grady == 1)) | ((mag_binary == 1) & (dir_binary == 1))] = 1
-    #warp
-    binary, M, minV = warp(s_channel, src, dst)
+    gradx = abs_sobel_thresh(undis_img, orient='x', thresh_min=30, thresh_max=230,ksize=15)
+    combined[((gradx == 1) | (s_channel == 1))] = 1
+    binary, M, minV = warp(combined, src, dst)
 
     #now clean lines are extracted lets go find the lanes
     histogram = np.sum(binary[int(binary.shape[0] / 2):, :], axis=0)
@@ -51,7 +44,7 @@ def process_Image(img):
     rightx_base = np.argmax(histogram[midpoint:]) + midpoint
 
     # Choose the number of sliding windows
-    nwindows = 9
+    nwindows = 11
     # Set height of windows
     window_height = np.int(binary.shape[0] / nwindows)
     #non zero pixels
@@ -64,9 +57,9 @@ def process_Image(img):
     rightx_current = rightx_base
 
     # Set the width of the windows +/- margin
-    margin = 100
+    margin = 80
     # Set minimum number of pixels found to recenter window
-    minpix = 50
+    minpix = 20
     # Create empty lists to receive left and right lane pixel indices
     left_lane_inds = []
     right_lane_inds = []
@@ -159,13 +152,13 @@ def process_Image(img):
     road_bkg = np.zeros_like(img)
     cv2.fillPoly(road, [left_lane], color=[255, 0, 0])
     cv2.fillPoly(road, [right_lane], color=[0, 0, 255])
-    cv2.fillPoly(road,[inner_lane],color=[64,225,10])
+    cv2.fillPoly(road,[inner_lane],color=[153,255,204])
     cv2.fillPoly(road_bkg, [left_lane], color=[255, 0, 0])
     cv2.fillPoly(road_bkg, [right_lane], color=[0, 0, 255])
     road = unwarp(road, minV)
     road_bk = unwarp(road_bkg, minV)
     base = cv2.addWeighted(img, 1.0, road_bk, -1.0, 0.0)
-    result = cv2.addWeighted(base, 1.0, road, 0.8, 0.0)
+    result = cv2.addWeighted(base, 1.0, road, 0.6, 0.0)
 
     #write radius and vehicle position difference from center of the lane
     camera_center = (left_fitx[-1]+right_fitx[-1])/2
@@ -185,4 +178,4 @@ Out_video = './tracked_video.mp4'
 print(Input_video)
 video_clip= VideoFileClip(Input_video)
 video_tracked = video_clip.fl_image(process_Image)
-video_tracked.write_videofile(Out_video,audio=False,fps=7)
+video_tracked.write_videofile(Out_video,audio=False)

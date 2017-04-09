@@ -80,13 +80,13 @@ def unwarp(warp_img, minV):
 def abs_sobel_thresh(img,ksize=3, orient='x', thresh_min=130, thresh_max=255):
     # # Apply the following steps to img
     # # 1) Convert to grayscale
-    # gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+    gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
 
     # 2) Take the derivative in x or y given orient = 'x' or 'y'
     if (orient == 'x'):
-        sobel = cv2.Sobel(img, cv2.CV_64F, 1, 0,ksize=ksize)
+        sobel = cv2.Sobel(gray, cv2.CV_64F, 1, 0,ksize=ksize)
     if (orient == 'y'):
-        sobel = cv2.Sobel(img, cv2.CV_64F, 0, 1,ksize=ksize)
+        sobel = cv2.Sobel(gray, cv2.CV_64F, 0, 1,ksize=ksize)
     # 3) Take the absolute value of the derivative or gradient
     abs_sobel = np.absolute(sobel)
     # 4) Scale to 8-bit (0 - 255) then convert to type = np.uint8
