@@ -1,4 +1,4 @@
-##Writeup Soheil jahanshahi P4
+## Writeup Soheil jahanshahi P4
 
 
 ---
@@ -41,11 +41,11 @@ The project consist of following files:
 [video1]: ./tracked_video.mp4 "Video"
 
 ---
-###Writeup / README
+### Writeup / README
 
-###Camera Calibration
+### Camera Calibration
 
-####1. Briefly state how you computed the camera matrix and distortion coefficients. Provide an example of a distortion corrected calibration image.
+#### 1. Briefly state how you computed the camera matrix and distortion coefficients. Provide an example of a distortion corrected calibration image.
 
 The code for this step is contained in the file called `camera_calib.py` 
 
@@ -57,22 +57,22 @@ I then used the output `obj_points` and `img_points` to compute the camera calib
 
 in the end I dumped calculated values to a pickle file.
 
-###Pipeline (single images)
+### Pipeline (single images)
 
-####1. Provide an example of a distortion-corrected image.
+#### 1. Provide an example of a distortion-corrected image.
 To demonstrate this step, I will describe how I apply the distortion correction to one of the test images like this one:
 ![alt text][image2]
 you can find the function `cal_undistort(img, mtx, dist)` in `helper.py` 
  
 First I load the pickle file to extract matrix corners and distortion coefficients and then I use `cv2.undistort` function to un-distort images, for `mtx` and `dist` I should pass the data from pickle file loaded earlier because that has the right values for calibration.
-####2. Describe how (and identify where in your code) you used color transforms, gradients or other methods to create a thresholded binary image.  Provide an example of a binary image result.
+#### 2. Describe how (and identify where in your code) you used color transforms, gradients or other methods to create a thresholded binary image.  Provide an example of a binary image result.
 I used a combination of saturate channel color(S in HLS) and  gradient in X direction (using `cv2.Sobel` function) to generate a binary image (thresholding steps at 35 to 37 in `pipeline.py`). Sobel X operator with kernel size `ksize = 15` has shown robust result to extract parallel lines cleanly with thresholding ratio between `min = 15` and `max = 100`. Moreover I combine X gradient image with thresholded S channel. For S channel I used threshold between `min=90` and `max=255`. It was a lot of experimenting!
 
 Here's an example of my output for this step.
 
 ![alt text][image3]
 
-####3. Describe how (and identify where in your code) you performed a perspective transform and provide an example of a transformed image.
+#### 3. Describe how (and identify where in your code) you performed a perspective transform and provide an example of a transformed image.
 
 The code for my perspective transform includes a function called `warp()`, which appears in lines 59 through 67 in the file `helper.py` .  The `warp()` function takes as inputs an image (`img`), as well as source (`src`) and destination (`dst`) points.  I chose the hardcode the source and destination points in the following manner:
 
@@ -93,14 +93,14 @@ This resulted in the following source and destination points:
 **Pipeline for waring image:** I started out by drawing four source points on image; two for each vertical line of a lane, like this:
 ![alt text][image4]
 
- Then I chose four other points where I wanted to map my warped image to it. I applied `cv2.getPerspectiveTransform` to extract the transformation matrix `M` and unwrap transformation matrix `Minv` i.e. mapping from `dst` to `src` points. finally by using `cv2.warpPerspective I warp the image. result of the warped imaged and corresponding binary image look like this:
+ Then I chose four other points where I wanted to map my warped image to it. I applied `cv2.getPerspectiveTransform` to extract the transformation matrix `M` and unwrap transformation matrix `Minv` i.e. mapping from `dst` to `src` points. finally by using `cv2.warpPerspective` I warp the image. result of the warped imaged and corresponding binary image look like this:
  
 ![alt text][image5]
 
 
 
 
-####4. Describe how (and identify where in your code) you identified lane-line pixels and fit their positions with a polynomial?
+#### 4. Describe how (and identify where in your code) you identified lane-line pixels and fit their positions with a polynomial?
 The code for below steps can be found in `pipeline.py` line 47 through 175.
  
 After lane lines are cleanly extracted, by scanning across x axis we can find peaks of accumulated pixels that helps us find lane lines. These peaks  are a good identification of two lines, we can use it to place our starting point of our lines. histogram below visualise what I just explained:  
@@ -111,11 +111,11 @@ For finding lines , It is a good idea to narrow down our searches vertical to th
 ![alt text][image7]
 
 
-####5. Describe how (and identify where in your code) you calculated the radius of curvature of the lane and the position of the vehicle with respect to centre.
+#### 5. Describe how (and identify where in your code) you calculated the radius of curvature of the lane and the position of the vehicle with respect to centre.
 
 I did this in lines 177 through 196 in my code in `pipeline.py`. For calculating radius of curvature having a second order polynomial I tried to fit a circle in y direction by calculation first and second derivative using [curvature formula](http://www.intmath.com/applications-differentiation/8-radius-curvature.php) with respect to y direction, you may ask why y direction? well because we already know the lines are close to vertical in warped image and may have the same `x` value for more than one `y` value. I decided to chose maximum y value corresponding to bottom of image, this will help to measure curvature closest to the vehicle. This however gives pixel based values in pixel space. To make values make sense I needed to map pixel space values in `pixel` to real world space values preferably in `meter` unit. it is not a perfect accuracy however as It was not needed in this project ,I assumed conversion rate of 30 meters long and 3.7 meters wide.
 
-####6. Provide an example image of your result plotted back down onto the road such that the lane area is identified clearly.
+#### 6. Provide an example image of your result plotted back down onto the road such that the lane area is identified clearly.
 
 I implemented this step in lines 197 through 237 in my code in `pipeline.py` in lines .  Here is an example of my result on a test image:
 
@@ -124,21 +124,21 @@ I implemented this step in lines 197 through 237 in my code in `pipeline.py` in 
 
 ---
 
-###Pipeline (video)
+### Pipeline (video)
 
-####1. Provide a link to your final video output.  Your pipeline should perform reasonably well on the entire project video (wobbly lines are ok but no catastrophic failures that would cause the car to drive off the road!).
+#### 1. Provide a link to your final video output.  Your pipeline should perform reasonably well on the entire project video (wobbly lines are ok but no catastrophic failures that would cause the car to drive off the road!).
 
 Here's a [link to my video result](./tracked_video.mp4)
 
 ---
 
-###Discussion
+### Discussion
 
-####1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
+#### 1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
 
 Here I'll talk about the approach I took, what techniques I used, what worked and why, where the pipeline might fail and how I might improve it if I were going to pursue this project further.  
 
-#####Problems face and Recommandation for improvement
+##### Problems face and Recommandation for improvement
 
 * Right lane not found in the video: I had this issue while only using S channel, the top right points were not found when only thresholding only on S channel. I combined S channel with Sobel x operator and that solved the issue
 * Right Lane line in the beginning of the video is wobbly, thats because I slide the window on each frame. To solve this issue I recommend using a class that gets average of best line for 5 frames instead of each frame. Since lane lines in a video almost are the same per 5 to 10 frames.
