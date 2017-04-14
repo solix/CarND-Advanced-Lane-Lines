@@ -1,3 +1,4 @@
+from Line import Line
 from helper import *
 import numpy as np
 import cv2
@@ -32,6 +33,8 @@ def process_Image(img):
 
     binary, M, minV = warp(combined, src, dst)
     warped_img = binary
+    left_line = Line()
+    right_line=Line()
     #now clean lines are extracted lets go find the lanes
     histogram = np.sum(binary[int(binary.shape[0] / 2):, :], axis=0)
     # Create an output image to draw on and  visualize the result
@@ -65,9 +68,11 @@ def process_Image(img):
     left_lane_inds = []
     right_lane_inds = []
 
-    if(left_lane_inds == [] or right_lane_inds == []):
+    if(left_line.detected == False or right_line.detected == False):
         # Step through the windows one by one
         for window in range(nwindows):
+            left_lane_inds = []
+            right_lane_inds = []
             # Identify window boundaries in x and y (and right and left)
             win_y_low = binary.shape[0] - np.int((window + 1) * window_height)
             win_y_high = binary.shape[0] - np.int(window * window_height)
@@ -85,63 +90,89 @@ def process_Image(img):
             # Append these indices to the lists
             left_lane_inds.append(good_left_inds)
             right_lane_inds.append(good_right_inds)
+
             # If you found > minpix pixels, recenter next window on their mean position
             if len(good_left_inds) > minpix:
                 leftx_current = np.int(np.mean(nonzerox[good_left_inds]))
             if len(good_right_inds) > minpix:
                 rightx_current = np.int(np.mean(nonzerox[good_right_inds]))
 
-    # Concatenate the arrays of indices
-    left_lane_inds = np.concatenate(left_lane_inds)
-    right_lane_inds = np.concatenate(right_lane_inds)
 
+            # Concatenate the arrays of indices
+            left_lane_inds = np.concatenate(left_lane_inds)
+            right_lane_inds = np.concatenate(right_lane_inds)
     # Extract left and right line pixel positions
+    #         print(nonzerox[right_lane_inds])
+            leftx = nonzerox[left_lane_inds]
+            lefty = nonzeroy[left_lane_inds]
+            rightx = nonzerox[right_lane_inds]
+            righty = nonzeroy[right_lane_inds]
+            left_line.allx = leftx
+            left_line.ally = lefty
+            right_line.allx = rightx
+            right_line.ally = righty
+            # Fit a second order polynomial to each
+            print(righty)
+            left_fit = np.polyfit(left_line.ally, left_line.allx, 2)
+            right_fit = np.polyfit(right_line.ally, right_line.allx, 2)
+            left_line.current_fit = left_fit
+            right_line.current_fit = right_fit
+            left_line.recent_xfitted.append(left_fit)
+            right_line.recent_xfitted.append(right_fit)
+            left_line.detected=True
+            right_line.detected = True
+    else:
 
-    leftx = nonzerox[left_lane_inds]
-    lefty = nonzeroy[left_lane_inds]
-    rightx = nonzerox[right_lane_inds]
-    righty = nonzeroy[right_lane_inds]
 
-    # Fit a second order polynomial to each
+        # It's now much easier to find line pixels!
+        # nonzero = binary.nonzero()
+        # nonzeroy = np.array(nonzero[0])
+        # nonzerox = np.array(nonzero[1])
+        left_lane_inds = ((nonzerox > (left_line.best_fit[0] * (nonzeroy ** 2) + left_line.best_fit[1] * nonzeroy + left_line.best_fit[2] - margin)) & (
+        nonzerox < (left_line.best_fit[0] * (nonzeroy ** 2) + left_line.best_fit[1] * nonzeroy + left_line.best_fit[2] + margin)))
+        right_lane_inds = (
+        (nonzerox > (right_line.best_fit[0] * (nonzeroy ** 2) + right_line.best_fit[1] * nonzeroy + right_line.best_fit[2] - margin)) & (
+        nonzerox < (right_line.best_fit[0] * (nonzeroy ** 2) + right_line.best_fit[1] * nonzeroy + right_line.best_fit[2] + margin)))
 
-    left_fit = np.polyfit(lefty, leftx, 2)
-    right_fit = np.polyfit(righty, rightx, 2)
-    # It's now much easier to find line pixels!
-    nonzero = binary.nonzero()
-    nonzeroy = np.array(nonzero[0])
-    nonzerox = np.array(nonzero[1])
-    margin = 100
-    left_lane_inds = ((nonzerox > (left_fit[0] * (nonzeroy ** 2) + left_fit[1] * nonzeroy + left_fit[2] - margin)) & (
-    nonzerox < (left_fit[0] * (nonzeroy ** 2) + left_fit[1] * nonzeroy + left_fit[2] + margin)))
-    right_lane_inds = (
-    (nonzerox > (right_fit[0] * (nonzeroy ** 2) + right_fit[1] * nonzeroy + right_fit[2] - margin)) & (
-    nonzerox < (right_fit[0] * (nonzeroy ** 2) + right_fit[1] * nonzeroy + right_fit[2] + margin)))
+        # Again, extract left and right line pixel positions
+        leftx = nonzerox[left_lane_inds]
+        lefty = nonzeroy[left_lane_inds]
+        rightx = nonzerox[right_lane_inds]
+        righty = nonzeroy[right_lane_inds]
+        left_line.allx = leftx
+        left_line.ally = lefty
+        right_line.allx = rightx
+        right_line.ally = righty
+        # Fit a second order polynomial to each
+        left_fit = np.polyfit(lefty, leftx, 2)
+        right_fit = np.polyfit(righty, rightx, 2)
 
-    # Again, extract left and right line pixel positions
-    leftx = nonzerox[left_lane_inds]
-    lefty = nonzeroy[left_lane_inds]
-    rightx = nonzerox[right_lane_inds]
-    righty = nonzeroy[right_lane_inds]
-    # Fit a second order polynomial to each
-    left_fit = np.polyfit(lefty, leftx, 2)
-    right_fit = np.polyfit(righty, rightx, 2)
-    #
+        left_line.current_fit = left_fit
+        right_line.current_fit = right_fit
+        left_line.recent_xfitted.append(left_fit)
+        right_line.recent_xfitted.append(right_fit)
+        #
     # Generate x and y values for plotting
     ploty = np.linspace(0, binary.shape[0] - 1, binary.shape[0])
-    left_fitx = left_fit[0] * ploty ** 2 + left_fit[1] * ploty + left_fit[2]
-    right_fitx = right_fit[0] * ploty ** 2 + right_fit[1] * ploty + right_fit[2]
+    left_fitx = left_line.current_fit[0] * ploty ** 2 + left_line.current_fit[1] * ploty + left_line.current_fit[2]
+    right_fitx = right_line.current_fit[0] * ploty ** 2 + right_line.current_fit[1] * ploty + right_line.current_fit[2]
     out_img[nonzeroy[left_lane_inds], nonzerox[left_lane_inds]] = [255, 0, 0]
     out_img[nonzeroy[right_lane_inds], nonzerox[right_lane_inds]] = [0, 0, 255]
     vid2=out_img
     #calculate radius of carvature
     y_eval = np.max(ploty) #maximum y-value, corresponding to the bottom of the image
+
     left_curverad = ((1 + (2 * left_fit[0] * y_eval + left_fit[1]) ** 2) ** 1.5) / np.absolute(2 * left_fit[0])
+    left_line.radius_of_curvature = left_curverad
+
     right_curverad = ((1 + (2 * right_fit[0] * y_eval + right_fit[1]) ** 2) ** 1.5) / np.absolute(2 * right_fit[0])
+    right_line.radius_of_curvature = right_curverad
+
     print(left_curverad, right_curverad)
     # # Define conversions in x and y from pixels space to meters
     # Define conversions in x and y from pixels space to meters
     ym_per_pix = 30 / 720  # meters per pixel in y dimension
-    xm_per_pix = 3.7 / 700  # meters per pixel in x dimension
+    xm_per_pix = 3.7 / 900  # meters per pixel in x dimension
 
     # Fit new polynomials to x,y in world space
     left_fit_cr = np.polyfit(ploty * ym_per_pix, left_fitx * xm_per_pix, 2)
@@ -208,7 +239,7 @@ def process_Image(img):
 
 Input_video = './project_video.mp4'
 Out_video = './tracked_video.mp4'
-print(Input_video)
+# print(Input_video)
 video_clip= VideoFileClip(Input_video)
 video_tracked = video_clip.fl_image(process_Image)
 video_tracked.write_videofile(Out_video,audio=False)
