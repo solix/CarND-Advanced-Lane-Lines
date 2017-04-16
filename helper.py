@@ -15,11 +15,12 @@ def plot_points(img):
     plt.plot(270, 700, 'o')  # bottomleft
     plt.show()
 
-def color_thresh( img):
+
+def color_thresh(img):
     img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
-    yellow_min = np.array([ 0, 80, 200], np.uint8)
-    yellow_max = np.array([ 40, 255, 255], np.uint8)
+    yellow_min = np.array([0, 80, 200], np.uint8)
+    yellow_max = np.array([40, 255, 255], np.uint8)
     yellow_mask = cv2.inRange(img, yellow_min, yellow_max)
 
     white_min = np.array([20, 0, 200], np.uint8)
@@ -33,6 +34,7 @@ def color_thresh( img):
     filtered[((yellow_mask == 0) & (white_mask == 0))] = 0
 
     return binary_output
+
 
 def subplot_images(img1, img2, title1, title2):
 
@@ -50,7 +52,6 @@ def subplot_images(img1, img2, title1, title2):
     plt.show()
 
 
-
 def cal_undistort(img, mtx, dist):
 
     dst = cv2.undistort(img, mtx, dist, None, mtx)
@@ -58,7 +59,7 @@ def cal_undistort(img, mtx, dist):
 
 
 # warp image to get a bird eye view
-def warp(img,src,dst):
+def warp(img, src, dst):
     # grayscale image
     # gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     img_size = (img.shape[1], img.shape[0])
@@ -71,7 +72,8 @@ def warp(img,src,dst):
 # unwarp image to original perspective
 def unwarp(warp_img, minV):
     img_size = (warp_img.shape[1], warp_img.shape[0])
-    unwarped = cv2.warpPerspective(warp_img, minV, img_size, flags=cv2.INTER_LINEAR)
+    unwarped = cv2.warpPerspective(
+        warp_img, minV, img_size, flags=cv2.INTER_LINEAR)
     return unwarped
 
 
@@ -79,16 +81,16 @@ def unwarp(warp_img, minV):
 # then takes an absolute value and applies a threshold.
 # Note: calling your function with orient='x', thresh_min=5, thresh_max=100
 # should produce output like the example image shown above this quiz.
-def abs_sobel_thresh(img,ksize=3, orient='x', thresh_min=130, thresh_max=255):
+def abs_sobel_thresh(img, ksize=3, orient='x', thresh_min=130, thresh_max=255):
     # # Apply the following steps to img
     # # 1) Convert to grayscale
     gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
 
     # 2) Take the derivative in x or y given orient = 'x' or 'y'
     if (orient == 'x'):
-        sobel = cv2.Sobel(gray, cv2.CV_64F, 1, 0,ksize=ksize)
+        sobel = cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize=ksize)
     if (orient == 'y'):
-        sobel = cv2.Sobel(gray, cv2.CV_64F, 0, 1,ksize=ksize)
+        sobel = cv2.Sobel(gray, cv2.CV_64F, 0, 1, ksize=ksize)
     # 3) Take the absolute value of the derivative or gradient
     abs_sobel = np.absolute(sobel)
     # 4) Scale to 8-bit (0 - 255) then convert to type = np.uint8
@@ -97,7 +99,8 @@ def abs_sobel_thresh(img,ksize=3, orient='x', thresh_min=130, thresh_max=255):
     # 6) Return this mask as your binary_output image
 
     binary_output = np.zeros_like(scaled_label)
-    binary_output[(scaled_label >= thresh_min) & (scaled_label <= thresh_max)] = 1
+    binary_output[(scaled_label >= thresh_min) &
+                  (scaled_label <= thresh_max)] = 1
     return binary_output
 
 
@@ -136,7 +139,8 @@ def dir_threshold(gray, sobel_kernel=3, thresh=(0, np.pi / 2)):
     magnitx = np.absolute(sobelx)
     magnity = np.absolute(sobely)
 
-    # 4) Use np.arctan2(abs_sobely, abs_sobelx) to calculate the direction of the gradient
+    # 4) Use np.arctan2(abs_sobely, abs_sobelx) to calculate the direction of
+    # the gradient
     arctan = np.arctan2(magnity, magnitx)
     # 5) Create a binary mask where direction thresholds are met
     binary_output = np.zeros_like(arctan)
@@ -158,11 +162,12 @@ def hls_select(img, thresh=(90, 255)):
     return binary
 
 
-#helper for thresh
+# helper for thresh
 def thresh(img, thresh_min, thresh_max):
     ret = np.zeros_like(img)
     ret[(img >= thresh_min) & (img <= thresh_max)] = 1
     return ret
+
 
 def hsv_select(img):
     hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
