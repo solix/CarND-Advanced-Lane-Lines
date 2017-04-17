@@ -14,10 +14,11 @@ calib_dist = pickle.load(open('./camera_cal/calib_dist_mtx.p', "rb"))
 mtx = calib_dist["mtx"]
 dist = calib_dist["dist"]
 
-#skip some frames 
+# skip some frames
 counter = 0
 left_l = Line()
 right_l = Line()
+
 
 def process_Image(img):
     # function to process each frame and validate the
@@ -73,7 +74,6 @@ def process_Image(img):
     left_lane_inds = []
     right_lane_inds = []
 
-
     if(left_l.detected == False or right_l.detected == False):
         # Step through the windows one by one
         for window in range(nwindows):
@@ -106,8 +106,6 @@ def process_Image(img):
             if len(good_right_inds) > minpix:
                 rightx_current = np.int(np.mean(nonzerox[good_right_inds]))
                 right_l.recent_xfitted = rightx_current
-    
-
 
         # Concatenate the arrays of indices
         left_lane_inds = np.concatenate(left_lane_inds)
@@ -120,7 +118,6 @@ def process_Image(img):
         rightx = nonzerox[right_lane_inds]
         righty = nonzeroy[right_lane_inds]
 
-
         # Fit a second order polynomial to each
 
         left_fit = np.polyfit(lefty, leftx, 2)
@@ -132,13 +129,12 @@ def process_Image(img):
         left_l.best_fit.append(left_fit)
         right_l.best_fit.append(right_fit)
 
-
     # It's now much easier to find line pixels!
     nonzero = binary.nonzero()
     nonzeroy = np.array(nonzero[0])
     nonzerox = np.array(nonzero[1])
-    left_fit = np.mean(left_l.best_fit,axis = 0 )
-    right_fit = np.mean(right_l.best_fit,axis = 0 )
+    left_fit = np.mean(left_l.best_fit, axis=0)
+    right_fit = np.mean(right_l.best_fit, axis=0)
     # print('last ten coefficient buffer: ' + str(left_l.best_fit))
     # print('average coefficient' + str(np.mean(left_l.best_fit,axis = 0 )))
     margin = 100
@@ -157,8 +153,7 @@ def process_Image(img):
     left_fit = np.polyfit(lefty, leftx, 2)
     # best_left = left
     right_fit = np.polyfit(righty, rightx, 2)
-    left_l.best_fit.append(left_fit)
-    right_l.best_fit.append(right_fit)
+
     #
     # Generate x and y values for plotting
     ploty = np.linspace(0, binary.shape[0] - 1, binary.shape[0])
@@ -177,11 +172,16 @@ def process_Image(img):
         (1 + (2 * right_fit[0] * y_eval + right_fit[1]) ** 2) ** 1.5) / np.absolute(2 * right_fit[0])
     print(left_curverad, right_curverad)
 
-    
     # # Define conversions in x and y from pixels space to meters
     # Define conversions in x and y from pixels space to meters
     ym_per_pix = 30 / 720  # meters per pixel in y dimension
-    xm_per_pix = 3.7 / 900  # meters per pixel in x dimension
+
+    left_c = left_fit[0] * binary.shape[0] ** 2 + left_fit[1] * binary.shape[0] + left_fit[2]
+    right_c = right_fit[0] * binary.shape[0] ** 2 + right_fit[1] * binary.shape[0] + right_fit[2]
+    width = right_c - left_c
+    xm_per_pix = 3.7 / width
+    
+    # xm_per_pix = 3.7 / 00  # meters per pixel in x dimension
 
     # Fit new polynomials to x,y in world space
     left_fit_cr = np.polyfit(ploty * ym_per_pix, left_fitx * xm_per_pix, 2)
@@ -189,11 +189,32 @@ def process_Image(img):
     # Calculate the new radii of curvature
     left_curverad = ((1 + (2 * left_fit_cr[0] * y_eval * ym_per_pix + left_fit_cr[1]) ** 2) ** 1.5) / np.absolute(
         2 * left_fit_cr[0])
-    
+
     right_curverad = ((1 + (2 * right_fit_cr[0] * y_eval * ym_per_pix + right_fit_cr[1]) ** 2) ** 1.5) / np.absolute(
         2 * right_fit_cr[0])
     # Now our radius of curvature is in meters
     # test values make sense 387.596834937 m 395.13117416 m
+
+    # Sanity check validate curvature in meters, this gained emperically by looking at
+    # ratio of left and right curavature
+    if(left_curverad < 800. and right_curverad > 1000.):
+        if(right_l.best_fit == None):
+            right_l.detected = False   
+
+        right_fit = right_l.best_fit.pop()
+        right_fitx = right_fit[0] * ploty ** 2 + \
+            right_fit[1] * ploty + right_fit[2]
+
+    elif(left_curverad > 1000. and right_curverad < 800.):
+        if(left_l.best_fit == None):
+            left_l.detected = False
+        left_fit = left_l.best_fit.pop()
+        left_fitx = left_fit[0] * ploty ** 2 + \
+            left_fit[1] * ploty + left_fit[2]
+           
+    left_l.best_fit.append(left_fit)
+    right_l.best_fit.append(right_fit)
+    
     print(left_curverad, 'm', right_curverad, 'm')
     # ok lets unwarp and draw line on image
     warp_zero = np.zeros_like(binary).astype(np.uint8)
@@ -255,7 +276,7 @@ def process_Image(img):
     vis[:180, 960:, :] = output4
     vis[180:, :, :] = output_main
 
-    # counter = counter + 1 
+    # counter = counter + 1
     return vis
 
 
