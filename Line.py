@@ -7,7 +7,7 @@ class Line():
         # was the line detected in the last iteration?
         self.detected = False
         # x values of the last n fits of the line
-        self.recent_xfitted = collections.deque([],maxlen=10)
+        self.recent_xfitted = collections.deque([],maxlen=15)
         #average x values of the fitted line over the last n=10 iterations
         self.bestx = np.mean(self.recent_xfitted, axis=0)
         #polynomial coefficients averaged over the last n iterations

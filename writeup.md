@@ -22,6 +22,7 @@ The project consist of following files:
 * `camera_calib/calib_dist_mtx.p`: saved pickle file for distortion coefficients and calibration matrix
 * `pipeline.py`: pipeline to process images will draw detected line on original image
 * `helper.py` : helper functions to use during pipeline 
+* `Line.py` : line tracker for recent best line, used for robust drawing on the video
 * `video_gen.py` : generate a video result for detected lane lines in a video
 * `tracked_video.mp4` : result of lane detection in a video
 
@@ -107,10 +108,10 @@ After lane lines are cleanly extracted, by scanning across x axis we can find pe
 
 ![alt text][image6]
 
-For finding lines , It is a good idea to narrow down our searches vertical to the starting point images and focus on those area from bottom to top sliding like a window. I created 11 sliding windows with `margin = 80` and `minpx = 20 `, to help set width with +/- margin and to recenter window if minimum pixel values not found in the window. Then  on each iteration points are extracted for left and right line pixels While scanning from bottom to top bottom vertically and fit a second order polynomial curve for `f(y)` because lane lines in warped image are vertical. this process results like this:     
+For finding lines , It is a good idea to narrow down our searches vertical to the starting point images and focus on those area from bottom to top sliding like a window. I created 11 sliding windows with `margin = 80` and `minpx = 30 `, to help set width with +/- margin and to recenter window if minimum pixel values not found in the window. Then  on each iteration points are extracted for left and right line pixels While scanning from bottom to top bottom vertically and fit a second order polynomial curve for `f(y)` because lane lines in warped image are vertical. this process results like this:     
 ![alt text][image7]
 
-
+Above process is only triggered when detection the first frame of the video is occurred or when there are no line detected at all for either left or right side. After lines are detected  `Line` class will track in memory coefficients for the last `15` frames   and thereafter using numpy operations we average the best line of the last 15 iterations. 
 #### 5. Describe how (and identify where in your code) you calculated the radius of curvature of the lane and the position of the vehicle with respect to centre.
 
 I did this in lines 177 through 196 in my code in `pipeline.py`. For calculating radius of curvature having a second order polynomial I tried to fit a circle in y direction by calculation first and second derivative using [curvature formula](http://www.intmath.com/applications-differentiation/8-radius-curvature.php) with respect to y direction, you may ask why y direction? well because we already know the lines are close to vertical in warped image and may have the same `x` value for more than one `y` value. I decided to chose maximum y value corresponding to bottom of image, this will help to measure curvature closest to the vehicle. This however gives pixel based values in pixel space. To make values make sense I needed to map pixel space values in `pixel` to real world space values preferably in `meter` unit. it is not a perfect accuracy however as It was not needed in this project ,I assumed conversion rate of 30 meters long and 3.7 meters wide.
@@ -130,6 +131,7 @@ I implemented this step in lines 197 through 237 in my code in `pipeline.py` in 
 
 Here's a [link to my video result](./tracked_video.mp4)
 
+
 ---
 
 ### Discussion
@@ -143,5 +145,16 @@ Here I'll talk about the approach I took, what techniques I used, what worked an
 * Right lane not found in the video: I had this issue while only using S channel, the top right points were not found when only thresholding only on S channel. I combined S channel with Sobel x operator and that solved the issue
 * Right Lane line in the beginning of the video is wobbly, thats because I slide the window on each frame. To solve this issue I recommend using a class that gets average of best line for 5 frames instead of each frame. Since lane lines in a video almost are the same per 5 to 10 frames.
 * If there is more time available to work on this project, you can also calculate an steering angel given the distance of vehicle to the lane line and radius of curvature.
+
+
+##### Solved issues #1st iteration
+* Smoothing the line : over last 15 iteration and by getting average of the coefficients helps smoothen the line drawing on each frame
+* Faster and more robust search: Window search is only implemented once the frame is not detected at all, after that lanes will refer to their previous coordinates to place the starting line, this helped in robustness of the line
+* Calculating width of the lane in real space was statically set to 700 as width, now as suggested by a peer reviewer I replaced the width to dynamically be calculated from image shape and last determined coefficients, this helped in better drawing of the width in real world space.
+* radius of curvature is checked and validated before drawing the line. Two lines are parallel if they have same slope, we check here if the ratio between radius of curvature of those two lines also making sense in terms of ratio. If the ratio of left/right line is smaller than 800 meter and the other left/right line is above 1000 (this gained empirically by debugging) we ditch the lines and use the last best fit.
+* Debugging video is added that is inspired by super handy suggestion by peer reviewer to debug outliers and observe behind the scenes
+* `Line.py` added to track all the lane lines and helped a lot from smoothing and robustness improvements
+
+
 
 

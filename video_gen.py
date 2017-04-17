@@ -31,8 +31,9 @@ def process_Image(img):
     dst = np.float32([[270, 700], [270, 500], [1120, 700], [1120, 500]])
     birdeye, M, minV = warp(undis_img, src, dst)
 
-    # color threshold on schannel
-    # this threshold is shown with a cleanest line extraction
+    # color threshold and grad x we combined these two for best result 
+    # this threshold is shown with a cleanest line extraction so far! 
+    #TODO: always place to improve accuracy for generalizing detection
     s_channel = hls_select(undis_img, thresh=(90, 255))
     gradx = abs_sobel_thresh(undis_img, orient='x',
                              thresh_min=30, thresh_max=40, ksize=25)
@@ -176,12 +177,13 @@ def process_Image(img):
     # Define conversions in x and y from pixels space to meters
     ym_per_pix = 30 / 720  # meters per pixel in y dimension
 
-    left_c = left_fit[0] * binary.shape[0] ** 2 + left_fit[1] * binary.shape[0] + left_fit[2]
-    right_c = right_fit[0] * binary.shape[0] ** 2 + right_fit[1] * binary.shape[0] + right_fit[2]
+    left_c = left_fit[0] * binary.shape[0] ** 2 + \
+        left_fit[1] * binary.shape[0] + left_fit[2]
+    right_c = right_fit[0] * binary.shape[0] ** 2 + \
+        right_fit[1] * binary.shape[0] + right_fit[2]
     width = right_c - left_c
     xm_per_pix = 3.7 / width
-    
-    # xm_per_pix = 3.7 / 00  # meters per pixel in x dimension
+
 
     # Fit new polynomials to x,y in world space
     left_fit_cr = np.polyfit(ploty * ym_per_pix, left_fitx * xm_per_pix, 2)
@@ -198,23 +200,22 @@ def process_Image(img):
     # Sanity check validate curvature in meters, this gained emperically by looking at
     # ratio of left and right curavature
     if(left_curverad < 800. and right_curverad > 1000.):
-        if(right_l.best_fit == None):
-            right_l.detected = False   
-
-        right_fit = right_l.best_fit.pop()
+        # if(right_l.best_fit == None):
+        # right_l.detected = False
+        right_fit = right_l.best_fit[-1]
         right_fitx = right_fit[0] * ploty ** 2 + \
             right_fit[1] * ploty + right_fit[2]
 
     elif(left_curverad > 1000. and right_curverad < 800.):
-        if(left_l.best_fit == None):
-            left_l.detected = False
-        left_fit = left_l.best_fit.pop()
+        # if(left_l.best_fit == None):
+        # left_l.detected = False
+        left_fit = left_l.best_fit[-1]
         left_fitx = left_fit[0] * ploty ** 2 + \
             left_fit[1] * ploty + left_fit[2]
-           
+
     left_l.best_fit.append(left_fit)
     right_l.best_fit.append(right_fit)
-    
+
     print(left_curverad, 'm', right_curverad, 'm')
     # ok lets unwarp and draw line on image
     warp_zero = np.zeros_like(binary).astype(np.uint8)
@@ -276,7 +277,6 @@ def process_Image(img):
     vis[:180, 960:, :] = output4
     vis[180:, :, :] = output_main
 
-    # counter = counter + 1
     return vis
 
 
