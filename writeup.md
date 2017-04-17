@@ -158,6 +158,6 @@ Here I'll talk about the approach I took, what techniques I used, what worked an
 
 ##### Recommendation after first iteration
 
-* Combining the different threshold ratio of color, magnitude, direction, sober x and y and more other so that the shadows are completely removed and lines are finely detected. This is a very experimental step and by 
+* Combining the different threshold ratio of color, magnitude, direction, sober x and y and more other so that the shadows are completely removed and lines are finely detected. This is a very experimental step. 
 
 
