@@ -129,7 +129,8 @@ I implemented this step in lines 197 through 237 in my code in `pipeline.py` in 
 
 #### 1. Provide a link to your final video output.  Your pipeline should perform reasonably well on the entire project video (wobbly lines are ok but no catastrophic failures that would cause the car to drive off the road!).
 
-<iframe width="850" height="415" src="./tracked_video.mp4" frameborder="10" allowfullscreen></iframe>
+Here's a [link to my video result](./tracked_video.mp4)
+<iframe width="850" height="415" src="./tracked_video.mp4" frameborder="0" ></iframe>
 
 
 ---
@@ -150,13 +151,13 @@ Here I'll talk about the approach I took, what techniques I used, what worked an
 ##### Solved issues first iteration
 * Smoothing the line : over last 15 iteration and by getting average of the coefficients helps smoothen the line drawing on each frame
 * Faster and more robust search: Window search is only implemented once the frame is not detected at all, after that lanes will refer to their previous coordinates to place the starting line, this helped in robustness of the line
-* Calculating width of the lane in real space was statically set to 700 as width, now as suggested by a peer reviewer I replaced the width to dynamically be calculated from image shape and last determined coefficients, this helped in better drawing of the width in real world space.
+* Calculating width of the lane in real space was statically that was set to 700 as width, now as suggested by a peer reviewer I replaced the width to dynamically be calculated from image shape and last determined coefficients, this helped in better drawing of the width in real world space.
 * Radius of curvature is checked and validated before drawing the line. Two lines are parallel if they have same slope, we check here if the ratio between radius of curvature of those two lines also making sense in terms of ratio. If the ratio of left/right line is smaller than 800 meter and the other left/right line is above 1000 (this gained empirically by debugging) we ditch the lines and use the last best fit.
 * Debugging video is added that is inspired by super handy suggestion by peer reviewer to debug outliers and observe behind the scenes
 * `Line.py` added to track all the lane lines and helped a lot to resolve smoothing and robustness issues.
 
 ##### Recommendation after first iteration
 
-* Combining the different threshold ratio of colour, magnitude, direction, sober x and y and more other so that the shadows are completely removed and lines are finely detected. This is a very experimental step and by 
+* Combining the different threshold ratio of color, magnitude, direction, sober x and y and more other so that the shadows are completely removed and lines are finely detected. This is a very experimental step and by 
 
 

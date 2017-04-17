@@ -34,6 +34,7 @@ def process_Image(img):
     # color threshold and grad x we combined these two for best result 
     # this threshold is shown with a cleanest line extraction so far! 
     #TODO: always place to improve accuracy for generalizing detection
+    
     s_channel = hls_select(undis_img, thresh=(90, 255))
     gradx = abs_sobel_thresh(undis_img, orient='x',
                              thresh_min=30, thresh_max=40, ksize=25)
